@@ -6,10 +6,30 @@ Example:
 
 ```js
 let ml = new WasmLoader.Loader()
-ml.load('foo/bar')
+ml.load('foo/bar').then(m => {
+  // 1. foo/bar.wasm is loaded,
+  // 2. imports are scanned and any unloaded modules required
+  //    are fetched and loaded
+  // 3. foo/bar is initialized with its dependencies
+  // 4. the promise is resolved with the module API:
+  let r = m.exports.add(10, 20)
+  console.log('add(10, 20) =>', r)
+})
 ```
 
-Synopsis:
+## Usage
+
+The loader has no dependencies and is just the small JavaScript file [`wasm-loader.js`](lib/wasm-loader.js)
+
+```html
+<script type="text/javascript" src="wasm-loader.js"></script>
+```
+
+When loaded into a global context, like in a HTML document, the script adds a single global variable `WasmLoader`. When loaded by a CommonJS, AMD or UMD module loader, the interface is instead added to `exports` (no global variable is created.)
+
+By default WASM module binaries are loaded by normalizing the path of the importer, i.e. if a module loaded from "foo/bar/cat" imports "../lol", then a request for "foo/lol.wasm" is made by the loader. You can override or wrap `Loader.fetch` and/or `Loader.normalizeRef` to alter this behavior.
+
+## Synopsis
 
 ```ts
 
