@@ -1,0 +1,6 @@
+example/**/*.cert
+example/**/*.key
+/node_modules
+
+# macOS
+.DS_Store

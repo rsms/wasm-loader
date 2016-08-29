@@ -1,0 +1,14 @@
+{
+  "name": "wasm-loader",
+  "version": "1.0.0",
+  "description": "WebAssembly module loader",
+  "main": "lib/wasm-loader.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "rsms",
+  "license": "MIT",
+  "devDependencies": {
+    "uglify-js": "^2.7.3"
+  }
+}

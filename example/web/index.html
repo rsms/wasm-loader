@@ -1,0 +1,49 @@
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Wasm Loader example</title>
+    <style type="text/css">
+
+* { margin:0; padding:0; font-family:inherit; }
+body { background:#f4f5f2; color:black; font:11px roboto, helvetica, sans-serif; }
+
+    </style>
+    <script type="text/javascript" src="lib/wasm-loader.js"></script>
+  </head>
+  <body>
+  </body>
+<script type="text/javascript">
+"use strict";
+
+let ml = new WasmLoader.Loader()
+let define = ml.defineAMD.bind(ml) // AMD module interface
+
+// JS modules can be defined with Loader.defineAMD (here aliased as "define")
+define('foo', {
+  bar(x) { return x * 100 }
+})
+
+// Load a WASM module by reference
+ml.load('pkg/root1').then(m => {
+  let r = m.exports.add(10, 20)
+  console.log('add(10, 20) =>', r)
+})
+
+// Load another WASM module by reference
+ml.load('pkg/root2')
+
+// Define a JavaScript module though Asynchronous Module Definition
+define('amd0', ['pkg/root1', 'pkg/hello_world'], (root1, hello_world) => {
+  // Note that root1 and hello_world are both WASM modules
+  return {
+    bar(x) { return root1.add(x * 100, 0); }
+  }
+}).then(m => {
+  let r = m.exports.bar(10)
+  console.log('bar(10) =>', r)
+})
+
+
+</script>
+</html>
