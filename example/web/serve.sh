@@ -1,7 +1,13 @@
 #!/bin/sh
 set -e
-
 cd "$(dirname "$0")"
+
+if [ "$1" = "-h" ] || [ "$1" = "-help" ] || [ "$1" = "--help" ]; then
+  echo "Usage: $0 [h2]" >&2
+  echo "  h2  Serve over HTTP/2 with TLS using caddy" >&2
+  exit 1
+fi
+
 proto=$1
 
 if [ "$proto" != "h2" ] && (which servedir >/dev/null); then

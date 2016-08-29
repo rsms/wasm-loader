@@ -1,6 +1,6 @@
 # wasm-loader
 
-A minimal WASM module loader.
+A minimal WebAssembly (WASM) module loader with automatic "import" resolution.
 
 Example:
 
@@ -16,6 +16,8 @@ ml.load('foo/bar').then(m => {
   console.log('add(10, 20) =>', r)
 })
 ```
+
+See [example/web](example/web) for a complete live example. Run `example/web/serve.sh -h` (requires [servedir]() or [caddy]() to be installed.)
 
 ## Usage
 
@@ -77,7 +79,6 @@ class Loader {
 interface AMDModule {
   exports  :any
   id?      :string
-  loading? :ModulePromiseResolver[]; // non-null while the module is currently loading
 }
 
 enum ModuleKind {
