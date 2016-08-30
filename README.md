@@ -35,14 +35,12 @@ By default WASM module binaries are loaded by normalizing the path of the import
 
 ```ts
 class Loader {
-  // Load a module by reference, calling `fetch` as needed.
-  // If the parentRef is specified, ref will be considered relative to the parentRef.
+  // Load a module by reference
   load(ref :string, parentRef? :string) :Promise<Module>
 
   // Load a module from a byte array.
-  // Note: If there's already a registered module for normalizeRef(ref), this throws as
-  // error because it would be ambiguous to replace a module that is currently loading
-  // as it could cause dependants to receive a different module for the same ref.
+  // Note: If there's already a registered module for normalizeRef(ref), this throws an
+  // error to avoid a race condition of loading two different modules with the same ref.
   loadBuf(buf :ArrayBuffer, kind: ModuleKind, ref :string, parentRef? :string) :Promise<Module>
 
   // Define a module via Asynchronous Module Definition (AMD) including resolution of any
@@ -54,13 +52,18 @@ class Loader {
             parentRef?    :string) :Promise<AMDModule>
 
   // Takes some ref and returns the canonical version of it.
-  // This is called for EVERY REQUEST no matter if the module is already loaded,
-  // so it needs to be efficient. Here so it can be overridden.
+  // ref starting with "./" or "../" will be considered relative to the parentRef, if specified.
+  // Note: This is called for EVERY import request, even if the module is already loaded.
+  // Override to alter behavior of how refs are interpreted.
   normalizeRef(ref :string, parentRef? :string) :string
 
-  // Fetches module source from a normalized ref. The default implementation uses `fetch`
-  // to request the source relative to the current document/program origin.
-  // Here so it can be overridden.
+  // Default function for fetching a module that makes a URL request with the ref, taking
+  // options.baseURL into consideration (if specified.)
+  // Can be overridden or wrapped by user to load module source in a different way.
+
+  // Default function for fetching a module that makes a URL request with the ref, taking
+  // options.baseURL into consideration. This implementation uses the Fetch API to retrieve
+  // the source as an ArrayBuffer. Override to alter where and how module source is loaded.
   fetch(ref :string, parentRef? :string) :Promise<FetchResult>
 }
 
