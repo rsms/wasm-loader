@@ -317,7 +317,7 @@ export interface FetchResult {
 
 // Asynchronous Module Definition (AMD) module
 export interface AMDModule {
-  exports  :any
+  exports  :any  // Not FFI since AMD allows `exports` to be anything
   id?      :string
 }
 

@@ -34,17 +34,6 @@ By default WASM module binaries are loaded by normalizing the path of the import
 ## Synopsis
 
 ```ts
-
-// Interface exported by a module
-interface FFI {
-  [name :string] :any
-}
-
-// A resolved module
-interface Module {
-  exports :FFI
-}
-
 class Loader {
   // Load a module by reference, calling `fetch` as needed.
   // If the parentRef is specified, ref will be considered relative to the parentRef.
@@ -81,9 +70,19 @@ interface LoaderOptions {
   baseURL?          :string  // URL prefix for canonical refs
 }
 
+// A resolved module
+interface Module {
+  exports :FFI
+}
+
+// Interface exported by a module
+interface FFI {
+  [name :string] :any
+}
+
 // Asynchronous Module Definition (AMD) module
 interface AMDModule {
-  exports  :any
+  exports  :any  // Not FFI since AMD allows `exports` to be anything
   id?      :string
 }
 
@@ -92,7 +91,6 @@ enum ModuleKind {
   JavaScript = 1,
 }
 
-// Result from a fetch operation
 interface FetchResult {
   buf  :ArrayBuffer
   kind :ModuleKind
