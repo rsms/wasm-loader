@@ -67,7 +67,6 @@ if $opt_optimize; then
     --source-map      wasm-loader.js.map \
     --source-map-url  wasm-loader.js.map \
     --in-source-map   wasm-loader.js.map \
-    --preamble "$()" \
     --compress \
     --mangle \
     -- \
