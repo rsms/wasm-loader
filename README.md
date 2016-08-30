@@ -17,7 +17,7 @@ ml.load('foo/bar').then(m => {
 })
 ```
 
-See [example/web](example/web) for a complete live example. Run `example/web/serve.sh -h` (requires [servedir]() or [caddy]() to be installed.)
+See [example/web](example/web) for a complete live example. Run `example/web/serve.sh -h` (requires [servedir](https://www.npmjs.com/package/secure-servedir) or [caddy](https://caddyserver.com/) to be installed.)
 
 ## Usage
 
