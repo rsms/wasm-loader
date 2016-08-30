@@ -8,7 +8,7 @@ Example:
 let ml = new WasmLoader.Loader()
 ml.load('foo/bar').then(m => {
   // 1. foo/bar.wasm is loaded,
-  // 2. imports are scanned, and steps 1 though 3 are performed
+  // 2. imports are scanned, and steps 1 through 3 are performed
   //    for each imported module in decent-first order.
   // 3. foo/bar is initialized with its dependencies, and finally
   // 4. the promise is resolved with the module API:
