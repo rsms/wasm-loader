@@ -8,14 +8,48 @@ Example:
 let ml = new WasmLoader.Loader()
 ml.load('foo/bar').then(m => {
   // 1. foo/bar.wasm is loaded,
-  // 2. imports are scanned and any unloaded modules required
-  //    are fetched and loaded
-  // 3. foo/bar is initialized with its dependencies
+  // 2. imports are scanned, and steps 1 though 3 are performed
+  //    for each additional loaded module in decent-first order.
+  // 3. foo/bar is initialized with its dependencies, and finally
   // 4. the promise is resolved with the module API:
   let r = m.exports.add(10, 20)
   console.log('add(10, 20) =>', r)
 })
 ```
+
+foo/bar.wasm:
+```lisp
+(module
+  (memory 256 256)
+  (export "add" $add)
+  (import $imp1 "hello_world" "add" (param i32 i32) (result i32))
+  (func $add (param $x f64) (param $y f64) (result f64)
+    (f64.add
+      (f64.convert_s/i32 (call_import $imp1 (i32.const 1) (i32.const 2)))
+      (f64.add
+        (get_local $x)
+        (get_local $y)
+      )
+    )
+  )
+)
+```
+
+foo/hello_world.wasm: (imported by foo/bar.wasm)
+```lisp
+(module
+  (memory 256 256)
+  (type $0 (func (param i32 i32) (result i32)))
+  (export "add" $add)
+  (func $add (type $0) (param $x i32) (param $y i32) (result i32)
+    (i32.add
+      (get_local $x)
+      (get_local $y)
+    )
+  )
+)
+```
+
 
 See [example/web](example/web) for a complete live example. Run `example/web/serve.sh -h` (requires [servedir](https://www.npmjs.com/package/secure-servedir) or [caddy](https://caddyserver.com/) to be installed.)
 
