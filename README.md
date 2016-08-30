@@ -63,6 +63,11 @@ By default WASM module binaries are loaded by normalizing the path of the import
 
 ```ts
 class Loader {
+  options :LoaderOptions
+
+  // Initialize with options
+  constructor(options? :LoaderOptions)
+
   // Load a module by reference
   load(ref :string, parentRef? :string) :Promise<Module>
 
