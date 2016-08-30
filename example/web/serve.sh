@@ -13,9 +13,17 @@ proto=$1
 if [ "$proto" != "h2" ] && (which servedir >/dev/null); then
   servedir
 elif (which caddy >/dev/null); then
+  caddy_args=(\
+    -host localhost \
+    "bind localhost" \
+    "mime .ts text/typescript" \
+  )
+
   if [ "$proto" == "h2" ]; then
     certfile=self-signed-localhost.cert
     keyfile=self-signed-localhost.key
+    caddy_args+=( "tls $certfile $keyfile" )
+
     if [ ! -f "$certfile" ]; then
       rm -f .csr.pem
       echo "generating TLS cert and key ($certfile, $keyfile)"
@@ -34,12 +42,8 @@ elif (which caddy >/dev/null); then
         set -e
       fi
     fi
-
-    # sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain /usr/local/etc/nginx/cert.pem
-    caddy -host localhost "mime .ts text/typescript" "tls $certfile $keyfile"
-  else
-    caddy -host localhost "mime .ts text/typescript"
   fi
+  caddy "${caddy_args[@]}"
 else
   echo "Can not find 'servedir' or 'caddy' in PATH." >&2
   echo "Install servedir from 'npm install -g secure-servedir', or"
