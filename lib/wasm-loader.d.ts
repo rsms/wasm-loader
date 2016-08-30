@@ -32,13 +32,13 @@ declare module WasmLoader {
         defineAMD(ref?: string, dependencies?: string[], factory?: (...args: any[]) => any | {
             [key: string]: any;
         }, parentRef?: string): Promise<AMDModule>;
-        private _load(buf, kind, ref);
-        private _loadWasm(buf, ref, m);
-        resolveImports(imports: Map<string, string[]>, ref: string): Promise<FFI>;
-        resolveImport(ref: string, funcnames: string[], parentRef: string): Promise<Module>;
-        readWasmImports(buf: ArrayBuffer): Map<string, string[]>;
         normalizeRef(ref: string, parentRef?: string): string;
         fetch(ref: string, parentRef?: string): Promise<FetchResult>;
+        private _load(buf, kind, ref);
+        private _loadWasm(buf, ref, m);
+        private _resolveImports(imports, ref);
+        private _resolveImport(ref, funcnames, parentRef);
+        private _readWasmImports(buf);
     }
 }
 declare var exports: {
@@ -52,4 +52,3 @@ declare var module: {
 declare var global: {
     [key: string]: any;
 };
-declare var process: {};

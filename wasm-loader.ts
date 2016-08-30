@@ -373,8 +373,7 @@ export class Loader {
   }
 
 
-  // Import a module by reference.
-  // If the parentRef is specified, ref will be considered relative to the parentRef.
+  // Import a module by reference
   load(ref :string, parentRef? :string) :Promise<Module> {
     // TODO: discover cyclic imports (and fail)
     return new Promise((resolve, reject) => {
@@ -511,8 +510,8 @@ export class Loader {
         } else if (depref === 'module') {
           return Promise.resolve<any>(m);
         } else {
-          // Note: no function names passed to resolveImport as AMD doesn't support it.
-          return this.resolveImport(depref, [], _ref)
+          // Note: no function names passed to _resolveImport as AMD doesn't support it.
+          return this._resolveImport(depref, [], _ref)
         }
       })
 
@@ -532,154 +531,9 @@ export class Loader {
   }
 
 
-  // Internal module loader that expects `_modules.get(ref).loading` to be an
-  // array of promise callbacks (the array can be empty.)
-  // Also expects `ref == normalizeRef(ref)`.
-  private _load(buf :ArrayBuffer, kind: ModuleKind, ref :string) {
-    let m = this._modules.get(ref);
-
-    let resolve = (m0 :Module) => {
-      this._modules.set(ref, m0);
-      m.loading.forEach(p => p.resolve(m0))
-    }
-
-    let reject = (err :Error) => {
-      m.loading.forEach(p => p.reject(err))
-      m.loading = null
-      m.error = err
-    }
-
-    switch (kind) {
-      case ModuleKind.Wasm: {
-        this._loadWasm(buf, ref, m).then(resolve).catch(reject);
-        break;
-      }
-      case ModuleKind.JavaScript: {
-        throw new Error('ModuleKind.JavaScript not implemented');
-      }
-      default: {
-        throw new Error('invalid module kind');
-      }
-    }
-  }
-
-
-  private _loadWasm(buf :ArrayBuffer, ref :string, m :ModuleEntry) :Promise<Module> {
-    if (!this.options.skipVerification) {
-      try {
-        Wasm.verifyModule(buf);
-      } catch (err) {
-        throw new Error('Invalid Wasm module: ' + (err.message || String(err)))
-      }
-    }
-
-    let imports = this.readWasmImports(buf);
-    return this.resolveImports(imports, ref).then(imports => {
-      let m0 = Wasm.instantiateModule(buf, imports)
-      if (!m0.exports) {
-        m0 = {exports:{}};
-      }
-      // console.log(`init wasm ${ref} =>`, m0)
-      return m0
-    })
-  }
-
-
-  resolveImports(imports :Map<string,string[]>, ref :string) :Promise<FFI> {
-    return new Promise<FFI>((resolve, reject) => {
-
-      let importObj :FFI = {};
-      
-      let resolvedCount = 1;
-      let decrResolved = () => {
-        if (--resolvedCount === 0) {
-          resolve(importObj);
-        }
-      };
-      
-      imports.forEach((funcnames, modref) => {
-        ++resolvedCount;
-        
-        this.resolveImport(modref, funcnames, ref).then(funcs => {
-          importObj[modref] = funcs;
-          decrResolved();
-        }).catch(err => {
-          resolvedCount = 0;
-          reject(err);
-        })
-      })
-
-      decrResolved();
-    });
-  }
-
-
-  resolveImport(ref :string, funcnames :string[], parentRef :string) :Promise<Module> {
-    return this.load(ref, parentRef).then(m => {
-      // check that names exist
-      funcnames.forEach(funcName => {
-        if (!m.exports[funcName]) {
-          throw new Error(
-            `no function "${funcName}" in module "${ref}" imported by "${parentRef}"`
-          )
-        }
-      });
-      return m.exports;
-    })
-  }
-
-
-  // Returns a Map, mapping module name to a list of functions required.
-  readWasmImports(buf :ArrayBuffer) :Map<string,string[]> {
-    let imports = new Map<string,string[]>()
-    let importSect = WASMScanner.FindSect(buf, WASMScanner.SectIDImport)
-
-    if (importSect) {
-      let count = importSect.ReadU32v(); // count of import entries to follow
-      let i = 0;
-      for (; i < count; ++i) {
-        /*let sig_index =*/ importSect.ReadU32v(); // signature index of the import
-        let modname = importSect.ReadUTF8Str();
-        let funcname = importSect.ReadUTF8Str();
-        let imps = imports.get(modname);
-        if (!imps) {
-          imps = [];
-          imports.set(modname, imps);
-        }
-        imps.push(funcname);
-      }
-    }
-
-    // TODO: read "type" section and map sig_index from above to signatures.
-    // since the signatures are to be compared with those exported, all we need
-    // is the subarray of each import signature, that we later compare byte-by-byte
-    // to the export signatures. No need to interpret the signatures.
-    //
-    //let typeSect = WASMScanner.FindSect(buf, WASMScanner.SectIDType);
-    //...
-
-    // TODO: Allow disabling signature checks for "production" situations.
-
-    return imports;
-  }
-
-
-  // Explicitly define a module that is already initialized.
-  // This can be used to expose a JavaScript module.
-  // The ref is assumed to be normalized already (normalizeRef is NOT called.)
-  // define(ref :string, exports :FFI) :Module {
-  //   if (this._modules.has(ref)) {
-  //     throw new Error(`module "${ref}" already registered`);
-  //   }
-  //   let m :Module = {exports}
-  //   this._modules.set(ref, m);
-  //   return m
-  // }
-
-
   // Takes some ref and returns the canonical version of it.
-  // This is called for EVERY REQUEST no matter if the module is already loaded,
-  // so it needs to be efficient.
+  // ref starting with "./" or "../" will be considered relative to the parentRef, if specified.
+  // Note: This is called for EVERY import request, even if the module is already loaded.
   normalizeRef(ref :string, parentRef? :string) :string {
     if (parentRef && ref[0] === '.' && (ref[1] === '/' || ref.substr(0,3) === '../')) {
       // ref is relative to parentRef
@@ -726,6 +580,151 @@ export class Loader {
       }) // as Promise<FetchResult>
     })
   }
+
+
+  // Internal module loader that expects `_modules.get(ref).loading` to be an
+  // array of promise callbacks (the array can be empty.)
+  // Also expects `ref == normalizeRef(ref)`.
+  private _load(buf :ArrayBuffer, kind: ModuleKind, ref :string) {
+    let m = this._modules.get(ref);
+
+    let resolve = (m0 :Module) => {
+      this._modules.set(ref, m0);
+      m.loading.forEach(p => p.resolve(m0))
+    }
+
+    let reject = (err :Error) => {
+      m.loading.forEach(p => p.reject(err))
+      m.loading = null
+      m.error = err
+    }
+
+    switch (kind) {
+      case ModuleKind.Wasm: {
+        this._loadWasm(buf, ref, m).then(resolve).catch(reject);
+        break;
+      }
+      case ModuleKind.JavaScript: {
+        throw new Error('ModuleKind.JavaScript not implemented');
+      }
+      default: {
+        throw new Error('invalid module kind');
+      }
+    }
+  }
+
+
+  private _loadWasm(buf :ArrayBuffer, ref :string, m :ModuleEntry) :Promise<Module> {
+    if (!this.options.skipVerification) {
+      try {
+        Wasm.verifyModule(buf);
+      } catch (err) {
+        throw new Error('Invalid Wasm module: ' + (err.message || String(err)))
+      }
+    }
+
+    let imports = this._readWasmImports(buf);
+    return this._resolveImports(imports, ref).then(imports => {
+      let m0 = Wasm.instantiateModule(buf, imports)
+      if (!m0.exports) {
+        m0 = {exports:{}};
+      }
+      // console.log(`init wasm ${ref} =>`, m0)
+      return m0
+    })
+  }
+
+
+  private _resolveImports(imports :Map<string,string[]>, ref :string) :Promise<FFI> {
+    return new Promise<FFI>((resolve, reject) => {
+
+      let importObj :FFI = {};
+      
+      let resolvedCount = 1;
+      let decrResolved = () => {
+        if (--resolvedCount === 0) {
+          resolve(importObj);
+        }
+      };
+      
+      imports.forEach((funcnames, modref) => {
+        ++resolvedCount;
+        
+        this._resolveImport(modref, funcnames, ref).then(funcs => {
+          importObj[modref] = funcs;
+          decrResolved();
+        }).catch(err => {
+          resolvedCount = 0;
+          reject(err);
+        })
+      })
+
+      decrResolved();
+    });
+  }
+
+
+  private _resolveImport(ref :string, funcnames :string[], parentRef :string) :Promise<Module> {
+    return this.load(ref, parentRef).then(m => {
+      // check that names exist
+      funcnames.forEach(funcName => {
+        if (!m.exports[funcName]) {
+          throw new Error(
+            `no function "${funcName}" in module "${ref}" imported by "${parentRef}"`
+          )
+        }
+      });
+      return m.exports;
+    })
+  }
+
+
+  // Returns a Map, mapping module name to a list of functions required.
+  private _readWasmImports(buf :ArrayBuffer) :Map<string,string[]> {
+    let imports = new Map<string,string[]>()
+    let importSect = WASMScanner.FindSect(buf, WASMScanner.SectIDImport)
+
+    if (importSect) {
+      let count = importSect.ReadU32v(); // count of import entries to follow
+      let i = 0;
+      for (; i < count; ++i) {
+        /*let sig_index =*/ importSect.ReadU32v(); // signature index of the import
+        let modname = importSect.ReadUTF8Str();
+        let funcname = importSect.ReadUTF8Str();
+        let imps = imports.get(modname);
+        if (!imps) {
+          imps = [];
+          imports.set(modname, imps);
+        }
+        imps.push(funcname);
+      }
+    }
+
+    // TODO: read "type" section and map sig_index from above to signatures.
+    // since the signatures are to be compared with those exported, all we need
+    // is the subarray of each import signature, that we later compare byte-by-byte
+    // to the export signatures. No need to interpret the signatures.
+    //
+    //let typeSect = WASMScanner.FindSect(buf, WASMScanner.SectIDType);
+    //...
+
+    // TODO: Allow disabling signature checks for "production" situations.
+
+    return imports;
+  }
+
+
+  // Explicitly define a module that is already initialized.
+  // This can be used to expose a JavaScript module.
+  // The ref is assumed to be normalized already (normalizeRef is NOT called.)
+  // define(ref :string, exports :FFI) :Module {
+  //   if (this._modules.has(ref)) {
+  //     throw new Error(`module "${ref}" already registered`);
+  //   }
+  //   let m :Module = {exports}
+  //   this._modules.set(ref, m);
+  //   return m
+  // }
 }
 
 // Required by the AMD spec
@@ -737,7 +736,6 @@ export class Loader {
 declare var exports: {[key :string] :any}
 declare var module: {exports:{[key :string] :any}}
 declare var global: {[key :string] :any}
-declare var process: {}
 
 if (typeof exports !== 'undefined') {
   if (typeof module === 'object') {
