@@ -128,7 +128,7 @@ interface FetchResult {
 
 The source is written in TypeScript. You can use the build script in [`misc/build.sh`](misc/build.sh):
 
-```sh
+```
 $ misc/build.sh -h
 Usage: misc/build.sh [-g|-watch|-help]
   -g      Don't optimize
@@ -138,7 +138,7 @@ Usage: misc/build.sh [-g|-watch|-help]
 
 To build an optimized version of wasm-loader, just run the script without any arguments:
 
-```sh
+```
 $ misc/build.sh
 tsc: wasm-loader.ts -> lib/wasm-loader.d.ts
 tsc: wasm-loader.ts -> lib/wasm-loader.js
@@ -147,7 +147,7 @@ uglifyjs: lib/wasm-loader.js -> lib/wasm-loader.js
 
 To have the TypeScript compiler perform incremental compilation (which is much faster than one-shot compilation), pass the `-watch` flag:
 
-```sh
+```
 $ misc/build.sh -watch
 6:41:30 PM - Compilation complete. Watching for file changes.
 ...
