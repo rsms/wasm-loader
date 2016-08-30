@@ -58,10 +58,6 @@ class Loader {
   normalizeRef(ref :string, parentRef? :string) :string
 
   // Default function for fetching a module that makes a URL request with the ref, taking
-  // options.baseURL into consideration (if specified.)
-  // Can be overridden or wrapped by user to load module source in a different way.
-
-  // Default function for fetching a module that makes a URL request with the ref, taking
   // options.baseURL into consideration. This implementation uses the Fetch API to retrieve
   // the source as an ArrayBuffer. Override to alter where and how module source is loaded.
   fetch(ref :string, parentRef? :string) :Promise<FetchResult>
