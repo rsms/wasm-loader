@@ -20,6 +20,8 @@ declare module WasmLoader {
         id?: string;
     }
     interface LoaderOptions {
+        skipVerification?: boolean;
+        baseURL?: string;
     }
     class Loader {
         private _modules;

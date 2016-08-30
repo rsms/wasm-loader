@@ -323,14 +323,14 @@ export interface AMDModule {
 
 // Options passed to Loader constructor
 export interface LoaderOptions {
+  skipVerification? :boolean // Don't call Wasm.verifyModule on loaded modules
+  baseURL?          :string  // URL prefix for canonical refs
 }
 
 
 // internal types
 
 interface _AMDModule extends AMDModule {
-  exports  :any
-  id?      :string
   loading? :ModulePromiseResolver[]; // non-null while the module is currently loading
 }
 
@@ -361,7 +361,15 @@ export class Loader {
 
   constructor(options? :LoaderOptions) {
     this._modules = new Map<string, ModuleEntry>()
-    this.options = (typeof options === 'object') ? options : {}
+    if (typeof options === 'object') {
+      this.options = options
+      if (this.options.baseURL && this.options.baseURL.substr(-1) !== '/') {
+        // baseURL must end with a slash
+        this.options.baseURL += '/'
+      }
+    } else {
+      this.options = {}
+    }
   }
 
 
@@ -557,11 +565,12 @@ export class Loader {
 
 
   private _loadWasm(buf :ArrayBuffer, ref :string, m :ModuleEntry) :Promise<Module> {
-    // This block can be disabled when all modules involved have already been verified.
-    try {
-      Wasm.verifyModule(buf);
-    } catch (err) {
-      throw new Error('Invalid Wasm module: ' + (err.message || String(err)))
+    if (!this.options.skipVerification) {
+      try {
+        Wasm.verifyModule(buf);
+      } catch (err) {
+        throw new Error('Invalid Wasm module: ' + (err.message || String(err)))
+      }
     }
 
     let imports = this.readWasmImports(buf);
@@ -695,6 +704,9 @@ export class Loader {
     let url = ref;
     if (url.substr(-5) !== '.wasm') {
       url += '.wasm';
+    }
+    if (this.options.baseURL && url[0] !== '/' && url.indexOf('://') === -1) {
+      url = this.options.baseURL + url
     }
     // console.log('fetch', url)
     return fetch(new Request(url)).then(res => {

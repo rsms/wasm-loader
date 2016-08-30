@@ -75,6 +75,12 @@ class Loader {
   fetch(ref :string, parentRef? :string) :Promise<FetchResult>
 }
 
+// Options passed to Loader constructor
+interface LoaderOptions {
+  skipVerification? :boolean // Don't call Wasm.verifyModule on loaded modules
+  baseURL?          :string  // URL prefix for canonical refs
+}
+
 // Asynchronous Module Definition (AMD) module
 interface AMDModule {
   exports  :any
